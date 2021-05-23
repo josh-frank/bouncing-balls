@@ -1,29 +1,66 @@
+import { useCallback, useEffect } from 'react';
+
+import { useDispatch, useSelector } from 'react-redux';
+import { setBallPosition, setBallVelocity } from './redux/ballsSlice';
+
 import './App.css';
 
 import Ball from './components/Ball';
 
-const testBalls = [
-  { color: "black", size: 20, position: [ 0, 0 ], velocity: [ 2, 1 ] },
-  { color: "red", size: 30, position: [ 0, 0 ], velocity: [ 1, 2 ] },
-  { color: "blue", size: 100, position: [ 0, 0 ], velocity: [ 3, 4 ] },
-  { color: "green", size: 5, position: [ 0, 0 ], velocity: [ 1, 1 ] }
-];
+const viewportHeight = document.documentElement.clientHeight;
+const viewportWidth = document.documentElement.clientWidth;
 
 function App() {
 
-  const ballComponents = testBalls.map( ( ball, index ) => {
-    return <Ball
-      key={ index }
-      ballNumber={ index }
-      color={ ball.color }
-      size={ ball.size }
-      velocity={ ball.velocity }
-    />;
-  } );
+  const dispatch = useDispatch();
+
+  const balls = useSelector( state => state.balls );
+
+  const moveBalls = useCallback( () => {
+    balls.forEach( ( ball, index ) => {
+      dispatch( setBallPosition( {
+        ballIndex: index,
+        position: [ ball.position[ 0 ] + ball.velocity[ 0 ], ball.position[ 1 ] + ball.velocity[ 1 ] ]
+      } ) );
+      if ( ball.position[ 0 ] > viewportHeight - ball.size ) {
+        dispatch( setBallVelocity( {
+          ballIndex: index,
+          velocity: [ -Math.abs( ball.velocity[ 0 ] ), ball.velocity[ 1 ] ]
+        } ) );
+      }
+      if ( ball.position[ 0 ] < 0 ) {
+        dispatch( setBallVelocity( {
+          ballIndex: index,
+          velocity: [ Math.abs( ball.velocity[ 0 ] ), ball.velocity[ 1 ] ]
+        } ) );      }
+      if ( ball.position[ 1 ] > viewportWidth - ball.size ) {
+        dispatch( setBallVelocity( {
+          ballIndex: index,
+          velocity: [ ball.velocity[ 0 ], -Math.abs( ball.velocity[ 1 ] ) ]
+        } ) );
+      }
+      if ( ball.position[ 1 ] < 0 ) {
+        dispatch( setBallVelocity( {
+          ballIndex: index,
+          velocity: [ ball.velocity[ 0 ], Math.abs( ball.velocity[ 1 ] ) ]
+        } ) );      }
+    } );
+  }, [ balls, dispatch ] );
+
+  useEffect( () => {
+    const ballInterval = setInterval( moveBalls, 10 );
+    return () => clearInterval( ballInterval );
+  }, [ moveBalls ] );
 
   return (
     <div className="app">
-      { ballComponents }
+      { balls.map( ( ball, index ) => {
+        return <Ball
+          key={ index }
+          ballNumber={ index }
+          ball={ ball }
+        />;
+      } ) }
     </div>
   );
 
