@@ -7,8 +7,7 @@ import './App.css';
 
 import Ball from './components/Ball';
 
-const viewportHeight = document.documentElement.clientHeight;
-const viewportWidth = document.documentElement.clientWidth;
+import { ballCollision, bottomWallCollision, evaluateCollision, leftWallCollision, rightWallCollision, topWallCollision } from './utilities/detectCollision';
 
 function App() {
 
@@ -16,34 +15,66 @@ function App() {
 
   const balls = useSelector( state => state.balls );
 
+  
+  // this callback represents a single animation frame
   const moveBalls = useCallback( () => {
-    balls.forEach( ( ball, index ) => {
-      dispatch( setBallPosition( {
-        ballIndex: index,
-        position: [ ball.position[ 0 ] + ball.velocity[ 0 ], ball.position[ 1 ] + ball.velocity[ 1 ] ]
-      } ) );
-      if ( ball.position[ 0 ] > viewportHeight - ball.size ) {
+    // Create an array to keep track of which balls are colliding, if any
+    let isColliding = balls.map( () => false );
+    // Start looping: for each ball...
+    balls.forEach( ( ball, ballIndex ) => {
+      // if ball-to-wall collision is detected, reverse the ball's vertical or horizontal velocity
+      if ( bottomWallCollision( ball ) ) {
         dispatch( setBallVelocity( {
-          ballIndex: index,
+          ballIndex: ballIndex,
           velocity: [ -Math.abs( ball.velocity[ 0 ] ), ball.velocity[ 1 ] ]
         } ) );
       }
-      if ( ball.position[ 0 ] < 0 ) {
+      if ( topWallCollision( ball ) ) {
         dispatch( setBallVelocity( {
-          ballIndex: index,
+          ballIndex: ballIndex,
           velocity: [ Math.abs( ball.velocity[ 0 ] ), ball.velocity[ 1 ] ]
         } ) );      }
-      if ( ball.position[ 1 ] > viewportWidth - ball.size ) {
+      if ( rightWallCollision( ball ) ) {
         dispatch( setBallVelocity( {
-          ballIndex: index,
+          ballIndex: ballIndex,
           velocity: [ ball.velocity[ 0 ], -Math.abs( ball.velocity[ 1 ] ) ]
         } ) );
       }
-      if ( ball.position[ 1 ] < 0 ) {
+      if ( leftWallCollision( ball ) ) {
         dispatch( setBallVelocity( {
-          ballIndex: index,
+          ballIndex: ballIndex,
           velocity: [ ball.velocity[ 0 ], Math.abs( ball.velocity[ 1 ] ) ]
-        } ) );      }
+        } ) );
+      }
+      // Find the index of the first ball collided with, if a collision is occurring
+      const collidedBallIndex = balls.findIndex( ( otherBall, index ) => ballCollision( ball, otherBall ) && index !== ballIndex );
+      if ( collidedBallIndex > -1 ) {
+        // A collision occured, so evaluate it and calculate the change in velocity...
+        const collisionEvaluation = evaluateCollision( ball, balls[ collidedBallIndex ] );
+        const impulse = 2 * collisionEvaluation.speed / ( ball.size + balls[ collidedBallIndex ].size );
+        // Then dispatch the changes to both balls' velocities and mark each as collided
+        if ( collisionEvaluation.speed >= 0 && !isColliding[ ball ] ) dispatch( setBallVelocity( {
+          ballIndex: ballIndex,
+          velocity: [
+            ball.velocity[ 0 ] - ( collisionEvaluation.direction[ 0 ] * impulse * balls[ collidedBallIndex ].size ),
+            ball.velocity[ 1 ] - ( collisionEvaluation.direction[ 1 ] * impulse * balls[ collidedBallIndex ].size )
+          ]
+        } ) );
+        if ( collisionEvaluation.speed >= 0 && !isColliding[ balls[ collidedBallIndex ] ] ) dispatch( setBallVelocity( {
+          ballIndex: collidedBallIndex,
+          velocity: [
+            balls[ collidedBallIndex ].velocity[ 0 ] + ( collisionEvaluation.direction[ 0 ] * impulse * ball.size ),
+            balls[ collidedBallIndex ].velocity[ 1 ] + ( collisionEvaluation.direction[ 1 ] * impulse * ball.size )
+          ]
+        } ) );
+        isColliding[ ballIndex ] = true;
+        isColliding[ collidedBallIndex ] = true;
+      }
+      // advance ball movement animation forward according to said ball's [ vertical, horizontal ] velocity
+      dispatch( setBallPosition( {
+        ballIndex: ballIndex,
+        position: [ ball.position[ 0 ] + ball.velocity[ 0 ], ball.position[ 1 ] + ball.velocity[ 1 ] ]
+      } ) );
     } );
   }, [ balls, dispatch ] );
 
@@ -54,10 +85,10 @@ function App() {
 
   return (
     <div className="app">
-      { balls.map( ( ball, index ) => {
+      { balls.map( ( ball, ballIndex ) => {
         return <Ball
-          key={ index }
-          ballNumber={ index }
+          key={ ballIndex }
+          ballNumber={ ballIndex }
           ball={ ball }
         />;
       } ) }

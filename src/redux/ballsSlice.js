@@ -3,10 +3,11 @@ import { createSlice } from "@reduxjs/toolkit";
 const ballsSlice = createSlice( {
     name: "balls",
     initialState: [
-        { color: "black", size: 20, position: [ 0, 0 ], velocity: [ 2, 1 ] },
-        { color: "red", size: 30, position: [ 0, 0 ], velocity: [ 1, 2 ] },
-        { color: "blue", size: 100, position: [ 0, 0 ], velocity: [ 3, 4 ] },
-        { color: "green", size: 5, position: [ 0, 0 ], velocity: [ 1, 1 ] }
+        { color: "blue", size: 200, position: [ 0, 0 ], velocity: [ 1, 2 ] },
+        { color: "green", size: 200, position: [ 300, 0 ], velocity: [ 2, 1 ] },
+        { color: "black", size: 200, position: [ 0, 500 ], velocity: [ 3, 3 ] },
+        { color: "purple", size: 200, position: [ 300, 300 ], velocity: [ 0, 2 ] },
+        { color: "red", size: 200, position: [ 400, 500 ], velocity: [ 4, 2 ] },
       ],
     reducers: {
         addBall( state, action ) {
